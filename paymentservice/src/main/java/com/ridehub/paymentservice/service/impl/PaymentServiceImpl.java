@@ -6,6 +6,7 @@ import com.ridehub.paymentservice.entity.Payment;
 import com.ridehub.paymentservice.enums.PaymentStatus;
 import com.ridehub.paymentservice.exception.ResourceNotFoundException;
 import com.ridehub.paymentservice.repository.PaymentRepository;
+import com.ridehub.paymentservice.service.interfaces.PaymentGatewayService;
 import com.ridehub.paymentservice.service.interfaces.PaymentService;
 import com.ridehub.paymentservice.util.TransactionIdGenerator;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +21,7 @@ import java.util.List;
 public class PaymentServiceImpl implements PaymentService {
 
     private final PaymentRepository paymentRepository;
+    private final PaymentGatewayService paymentGatewayService;
 
     @Override
     public PaymentResponse createPayment(PaymentRequest request) {
@@ -37,9 +39,11 @@ public class PaymentServiceImpl implements PaymentService {
                 .gateway("MOCK_GATEWAY")
                 .build();
 
-        Payment saved = paymentRepository.save(payment);
+        Payment savedPayment = paymentRepository.save(payment);
 
-        return mapToResponse(saved);
+        savedPayment = paymentGatewayService.processPayment(savedPayment);
+
+        return mapToResponse(savedPayment);
 
     }
 
