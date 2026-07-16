@@ -1,4 +1,17 @@
 package com.ridehub.paymentservice.repository;
 
-public interface PaymentRepository {
+import com.ridehub.paymentservice.entity.Payment;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import java.util.List;
+import java.util.Optional;
+
+public interface PaymentRepository extends JpaRepository<Payment, Long> {
+
+    Optional<Payment> findByTransactionId(String transactionId);
+
+    Optional<Payment> findByRideId(Long rideId);
+
+    List<Payment> findAllByPayerId(Long payerId);
+
 }
