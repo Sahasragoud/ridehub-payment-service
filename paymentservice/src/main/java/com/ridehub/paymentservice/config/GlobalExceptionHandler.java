@@ -1,10 +1,10 @@
 package com.ridehub.paymentservice.config;
 
-import com.ridehub.rideservice.dto.response.ErrorResponse;
-import com.ridehub.rideservice.exception.BadRequestException;
-import com.ridehub.rideservice.exception.BusinessRuleViolationException;
-import com.ridehub.rideservice.exception.DuplicateResourceException;
-import com.ridehub.rideservice.exception.ResourceNotFoundException;
+import com.ridehub.paymentservice.dto.response.ErrorResponse;
+import com.ridehub.paymentservice.exception.BadRequestException;
+import com.ridehub.paymentservice.exception.BusinessRuleViolationException;
+import com.ridehub.paymentservice.exception.DuplicateResourceException;
+import com.ridehub.paymentservice.exception.ResourceNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;

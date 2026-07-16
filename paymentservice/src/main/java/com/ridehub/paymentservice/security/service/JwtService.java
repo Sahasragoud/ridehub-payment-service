@@ -1,6 +1,6 @@
 package com.ridehub.paymentservice.security.service;
 
-import com.ridehub.rideservice.security.jwt.JwtProperties;
+import com.ridehub.paymentservice.security.jwt.JwtProperties;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;

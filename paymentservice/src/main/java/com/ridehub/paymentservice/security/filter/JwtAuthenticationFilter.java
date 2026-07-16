@@ -1,6 +1,6 @@
 package com.ridehub.paymentservice.security.filter;
 
-import com.ridehub.rideservice.security.service.JwtService;
+import com.ridehub.paymentservice.security.service.JwtService;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
