@@ -54,6 +54,15 @@ public class Payment {
 
     private String failureReason;
 
+    @Column(unique = true)
+    private String receiptNumber;
+
+    private String gatewayResponseCode;
+
+    private String gatewayMessage;
+
+    private LocalDateTime processedAt;
+
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 

@@ -27,10 +27,26 @@ public class PaymentResponse {
 
     private PaymentStatus status;
 
+    // Transaction Details
     private String transactionId;
 
     private String gateway;
 
-    private LocalDateTime createdAt;
+    private String gatewayOrderId;
 
+    private String gatewayPaymentId;
+
+    private String receiptNumber;
+
+    // Gateway Response
+    private String gatewayResponseCode;
+
+    private String gatewayMessage;
+
+    private String failureReason;
+
+    // Timestamps
+    private LocalDateTime processedAt;
+
+    private LocalDateTime createdAt;
 }
