@@ -20,7 +20,7 @@ public class OpenApiConfig {
         return new OpenAPI()
 
                 .info(new Info()
-                        .title("RideHub Driver Service API")
+                        .title("RideHub RIDE Service API")
                         .version("1.0.0")
                         .description("Microservice responsible for driver management in the RideHub platform.")
                         .contact(new Contact()
