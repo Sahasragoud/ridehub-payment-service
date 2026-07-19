@@ -34,4 +34,12 @@ public final class TransactionIdGenerator {
                 .substring(0, 12)
                 .toUpperCase();
     }
+
+    public String generateRefundTransactionId() {
+        return "RFD-" + UUID.randomUUID()
+                .toString()
+                .replace("-", "")
+                .substring(0, 12)
+                .toUpperCase();
+    }
 }
