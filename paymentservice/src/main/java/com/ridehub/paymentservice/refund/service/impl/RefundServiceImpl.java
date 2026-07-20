@@ -1,5 +1,7 @@
 package com.ridehub.paymentservice.refund.service.impl;
 
+import com.ridehub.paymentservice.client.RideClient;
+import com.ridehub.paymentservice.client.dto.request.UpdatePaymentStatusRequest;
 import com.ridehub.paymentservice.entity.Payment;
 import com.ridehub.paymentservice.enums.PaymentStatus;
 import com.ridehub.paymentservice.exception.BadRequestException;
@@ -32,6 +34,7 @@ public class RefundServiceImpl implements RefundService {
     private final PaymentRepository paymentRepository;
     private final TransactionIdGenerator transactionIdGenerator;
     private final RefundGatewayService refundGatewayService;
+    private final RideClient rideClient;
 
     @Override
     public RefundResponse createRefund(Long paymentId, RefundRequest request) {
@@ -74,18 +77,50 @@ public class RefundServiceImpl implements RefundService {
         RefundStatus gatewayStatus =
                 refundGatewayService.processRefund(refund);
 
-        if(gatewayStatus == RefundStatus.SUCCESS){
+        if (gatewayStatus == RefundStatus.SUCCESS) {
+
             refund.setStatus(RefundStatus.SUCCESS);
+
             payment.setStatus(PaymentStatus.REFUNDED);
-        }
-        else{
+
+            paymentRepository.save(payment);
+
+        } else {
+
             refund.setStatus(RefundStatus.FAILED);
+
         }
 
         refund.setProcessedAt(LocalDateTime.now());
+
         refundRepository.save(refund);
 
+        if (gatewayStatus == RefundStatus.SUCCESS) {
+
+            try {
+
+                rideClient.updatePaymentStatus(
+                        payment.getRideId(),
+                        UpdatePaymentStatusRequest.builder()
+                                .paymentStatus(PaymentStatus.REFUNDED)
+                                .build());
+
+                log.info("Ride Service updated successfully.");
+
+            } catch (Exception ex) {
+
+                log.error(
+                        "Unable to update Ride Service after refund. Ride={}",
+                        payment.getRideId(),
+                        ex
+                );
+            }
+
+        }
+
         log.info("Refund is created successfully.");
+
+
         return mapToResponse(refund);
     }
 

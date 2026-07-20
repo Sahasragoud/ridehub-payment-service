@@ -49,27 +49,6 @@ public class PaymentServiceImpl implements PaymentService {
                 .failureReason(null)
                 .build();
 
-        switch (payment.getStatus()) {
-
-            case SUCCESS -> {
-                payment.setGatewayResponseCode(GatewayResponse.SUCCESS_CODE);
-                payment.setGatewayMessage(GatewayResponse.SUCCESS_MESSAGE);
-            }
-
-            case FAILED -> {
-                payment.setGatewayResponseCode(GatewayResponse.FAILED_CODE);
-                payment.setGatewayMessage(GatewayResponse.FAILED_MESSAGE);
-                payment.setFailureReason("Insufficient Balance");
-            }
-
-            case PROCESSING -> {
-                payment.setGatewayResponseCode(GatewayResponse.PROCESSING_CODE);
-                payment.setGatewayMessage(GatewayResponse.PROCESSING_MESSAGE);
-            }
-
-            default -> {}
-        }
-
         Payment savedPayment = paymentRepository.save(payment);
 
         savedPayment = paymentGatewayService.processPayment(savedPayment);

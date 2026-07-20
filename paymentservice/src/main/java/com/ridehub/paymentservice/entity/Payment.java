@@ -5,6 +5,7 @@ import com.ridehub.paymentservice.enums.PaymentMethod;
 import com.ridehub.paymentservice.enums.PaymentStatus;
 import jakarta.persistence.*;
 import lombok.*;
+import org.springframework.http.HttpStatus;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
