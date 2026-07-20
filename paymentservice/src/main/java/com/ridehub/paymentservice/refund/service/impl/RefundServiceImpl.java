@@ -2,6 +2,7 @@ package com.ridehub.paymentservice.refund.service.impl;
 
 import com.ridehub.paymentservice.entity.Payment;
 import com.ridehub.paymentservice.enums.PaymentStatus;
+import com.ridehub.paymentservice.exception.BadRequestException;
 import com.ridehub.paymentservice.exception.BusinessRuleViolationException;
 import com.ridehub.paymentservice.exception.ResourceNotFoundException;
 import com.ridehub.paymentservice.refund.dto.request.RefundRequest;
@@ -9,6 +10,7 @@ import com.ridehub.paymentservice.refund.dto.response.RefundResponse;
 import com.ridehub.paymentservice.refund.entity.Refund;
 import com.ridehub.paymentservice.refund.enums.RefundStatus;
 import com.ridehub.paymentservice.refund.repository.RefundRepository;
+import com.ridehub.paymentservice.refund.service.interfaces.RefundGatewayService;
 import com.ridehub.paymentservice.refund.service.interfaces.RefundService;
 import com.ridehub.paymentservice.repository.PaymentRepository;
 import com.ridehub.paymentservice.util.TransactionIdGenerator;
@@ -17,6 +19,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -28,6 +31,7 @@ public class RefundServiceImpl implements RefundService {
     private final RefundRepository refundRepository;
     private final PaymentRepository paymentRepository;
     private final TransactionIdGenerator transactionIdGenerator;
+    private final RefundGatewayService refundGatewayService;
 
     @Override
     public RefundResponse createRefund(Long paymentId, RefundRequest request) {
@@ -38,6 +42,10 @@ public class RefundServiceImpl implements RefundService {
                 paymentRepository.findById(paymentId)
                         .orElseThrow(() ->
                                 new ResourceNotFoundException("Payment not found."));
+
+        if(payment.getStatus() == PaymentStatus.REFUNDED){
+            throw new BadRequestException("Payment is refunded already.");
+        }
 
         if(payment.getStatus() != PaymentStatus.SUCCESS)
         {
@@ -63,6 +71,18 @@ public class RefundServiceImpl implements RefundService {
                         transactionIdGenerator.generateRefundTransactionId())
                 .build();
 
+        RefundStatus gatewayStatus =
+                refundGatewayService.processRefund(refund);
+
+        if(gatewayStatus == RefundStatus.SUCCESS){
+            refund.setStatus(RefundStatus.SUCCESS);
+            payment.setStatus(PaymentStatus.REFUNDED);
+        }
+        else{
+            refund.setStatus(RefundStatus.FAILED);
+        }
+
+        refund.setProcessedAt(LocalDateTime.now());
         refundRepository.save(refund);
 
         log.info("Refund is created successfully.");
@@ -71,12 +91,19 @@ public class RefundServiceImpl implements RefundService {
 
     @Override
     public RefundResponse getRefund(Long refundId) {
-        return null;
+
+        Refund refund = refundRepository.findById(refundId)
+                .orElseThrow(() -> new ResourceNotFoundException("Refund not found with id : " + refundId));
+
+        return mapToResponse(refund);
     }
 
     @Override
     public List<RefundResponse> getRefundsByPayment(Long paymentId) {
-        return List.of();
+        return refundRepository.findByPaymentId(paymentId)
+                .stream()
+                .map(this :: mapToResponse)
+                .toList();
     }
 
     @Override
