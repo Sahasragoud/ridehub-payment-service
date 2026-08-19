@@ -3,8 +3,10 @@ package com.ridehub.paymentservice.service.impl;
 import com.ridehub.paymentservice.dto.response.GatewayResponse;
 import com.ridehub.paymentservice.entity.Payment;
 import com.ridehub.paymentservice.enums.PaymentStatus;
+import com.ridehub.paymentservice.exception.GatewayTimeoutException;
 import com.ridehub.paymentservice.repository.PaymentRepository;
 import com.ridehub.paymentservice.service.interfaces.PaymentGatewayService;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -23,7 +25,13 @@ public class MockPaymentGatewayService implements PaymentGatewayService {
 
     private final Random random = new Random();
 
+
     @Override
+    @CircuitBreaker(
+            name = "paymentGateway",
+            fallbackMethod = "paymentFallback"
+    )
+
     public Payment processPayment(Payment payment) {
 
         log.info("Processing payment {}", payment.getTransactionId());
@@ -37,14 +45,14 @@ public class MockPaymentGatewayService implements PaymentGatewayService {
 
         // Simulate gateway delay
         try {
-            Thread.sleep(2000);
+            Thread.sleep(6000);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
 
         int result = random.nextInt(100);
 
-        if (result < 80) {
+        if (result >= 85) {
 
             payment.setStatus(PaymentStatus.SUCCESS);
             payment.setGatewayResponseCode(GatewayResponse.SUCCESS_CODE);
@@ -53,7 +61,7 @@ public class MockPaymentGatewayService implements PaymentGatewayService {
             log.info("Payment {} completed successfully.",
                     payment.getTransactionId());
 
-        } else {
+        } else if(result >= 70){
 
             payment.setStatus(PaymentStatus.FAILED);
             payment.setFailureReason("Mock gateway declined the payment.");
@@ -63,9 +71,51 @@ public class MockPaymentGatewayService implements PaymentGatewayService {
             log.warn("Payment {} failed.",
                     payment.getTransactionId());
         }
+        else{
+            try {
+                Thread.sleep(6000);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+
+            log.error(
+                    "Gateway timeout for transaction {}",
+                    payment.getTransactionId()
+            );
+
+            throw new GatewayTimeoutException(
+                    "Payment gateway timed out."
+            );
+        }
 
         return paymentRepository.save(payment);
 
+    }
+
+    public Payment paymentFallback(
+            Payment payment,
+            Exception ex) {
+
+        log.error(
+                "Circuit Breaker activated. Payment {} skipped.",
+                payment.getTransactionId(),
+                ex
+        );
+
+        payment.setStatus(PaymentStatus.FAILED);
+        payment.setFailureReason(
+                "Payment gateway unavailable. Please try again later."
+        );
+
+        payment.setProcessedAt(LocalDateTime.now());
+
+        payment.setGatewayResponseCode("503");
+
+        payment.setGatewayMessage(
+                "Gateway temporarily unavailable"
+        );
+
+        return paymentRepository.save(payment);
     }
 
 }

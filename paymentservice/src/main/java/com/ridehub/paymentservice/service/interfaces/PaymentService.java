@@ -7,7 +7,10 @@ import java.util.List;
 
 public interface PaymentService {
 
-    PaymentResponse createPayment(PaymentRequest request);
+    PaymentResponse createPayment(
+            PaymentRequest request,
+            String idempotencyKey);
+
 
     PaymentResponse getPayment(Long paymentId);
 

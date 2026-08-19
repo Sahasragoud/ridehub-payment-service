@@ -1,5 +1,7 @@
 package com.ridehub.paymentservice.refund.service.impl;
 
+import com.ridehub.paymentservice.audit.enums.AuditEvent;
+import com.ridehub.paymentservice.audit.service.interfaces.AuditService;
 import com.ridehub.paymentservice.client.RideClient;
 import com.ridehub.paymentservice.client.dto.request.UpdatePaymentStatusRequest;
 import com.ridehub.paymentservice.entity.Payment;
@@ -7,6 +9,9 @@ import com.ridehub.paymentservice.enums.PaymentStatus;
 import com.ridehub.paymentservice.exception.BadRequestException;
 import com.ridehub.paymentservice.exception.BusinessRuleViolationException;
 import com.ridehub.paymentservice.exception.ResourceNotFoundException;
+import com.ridehub.paymentservice.kafka.dto.PaymentRefundFailedEvent;
+import com.ridehub.paymentservice.kafka.dto.PaymentRefundedEvent;
+import com.ridehub.paymentservice.kafka.publisher.PaymentEventPublisher;
 import com.ridehub.paymentservice.refund.dto.request.RefundRequest;
 import com.ridehub.paymentservice.refund.dto.response.RefundResponse;
 import com.ridehub.paymentservice.refund.entity.Refund;
@@ -34,27 +39,27 @@ public class RefundServiceImpl implements RefundService {
     private final PaymentRepository paymentRepository;
     private final TransactionIdGenerator transactionIdGenerator;
     private final RefundGatewayService refundGatewayService;
-    private final RideClient rideClient;
+    private final AuditService auditService;
+    private final PaymentEventPublisher paymentEventPublisher;
 
     @Override
-    public RefundResponse createRefund(Long paymentId, RefundRequest request) {
+    public RefundResponse createRefund(
+            Long paymentId,
+            RefundRequest request) {
 
-        log.info("Fetching Transaction details for payment : {}", paymentId);
+        log.info("Fetching transaction details for payment: {}", paymentId);
 
-        Payment payment =
-                paymentRepository.findById(paymentId)
-                        .orElseThrow(() ->
-                                new ResourceNotFoundException("Payment not found."));
+        Payment payment = paymentRepository.findById(paymentId)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException("Payment not found."));
 
-        if(payment.getStatus() == PaymentStatus.REFUNDED){
-            throw new BadRequestException("Payment is refunded already.");
+        if (payment.getStatus() == PaymentStatus.REFUNDED) {
+            throw new BadRequestException("Payment is already refunded.");
         }
 
-        if(payment.getStatus() != PaymentStatus.SUCCESS)
-        {
+        if (payment.getStatus() != PaymentStatus.SUCCESS) {
             throw new BusinessRuleViolationException(
-                    "Only successful payments can be refunded."
-            );
+                    "Only successful payments can be refunded.");
         }
 
         if (request.getAmount().compareTo(payment.getAmount()) > 0) {
@@ -77,49 +82,67 @@ public class RefundServiceImpl implements RefundService {
         RefundStatus gatewayStatus =
                 refundGatewayService.processRefund(refund);
 
+        refund.setProcessedAt(LocalDateTime.now());
+
         if (gatewayStatus == RefundStatus.SUCCESS) {
 
             refund.setStatus(RefundStatus.SUCCESS);
 
             payment.setStatus(PaymentStatus.REFUNDED);
+            payment.setProcessedAt(LocalDateTime.now());
 
             paymentRepository.save(payment);
+
+            refund = refundRepository.save(refund);
+
+            paymentEventPublisher.publishPaymentRefunded(
+
+                    PaymentRefundedEvent.builder()
+                            .refundId(refund.getId())
+                            .paymentId(refund.getPaymentId())
+                            .rideId(refund.getRideId())
+                            .amount(refund.getAmount())
+                            .refundTransactionId(refund.getRefundTransactionId())
+                            .processedAt(refund.getProcessedAt())
+                            .build()
+            );
+
+            auditService.log(
+                    payment.getId(),
+                    payment.getRideId(),
+                    AuditEvent.PAYMENT_REFUNDED,
+                    "SYSTEM",
+                    "Refund processed successfully."
+            );
 
         } else {
 
             refund.setStatus(RefundStatus.FAILED);
 
+            refund = refundRepository.save(refund);
+
+            paymentEventPublisher.publishPaymentRefundFailed(
+
+                    PaymentRefundFailedEvent.builder()
+                            .refundId(refund.getId())
+                            .paymentId(refund.getPaymentId())
+                            .rideId(refund.getRideId())
+                            .amount(refund.getAmount())
+                            .refundTransactionId(refund.getRefundTransactionId())
+                            .processedAt(refund.getProcessedAt())
+                            .build()
+            );
+
+            auditService.log(
+                    payment.getId(),
+                    payment.getRideId(),
+                    AuditEvent.REFUND_FAILED,
+                    "SYSTEM",
+                    "Refund gateway rejected the request."
+            );
         }
 
-        refund.setProcessedAt(LocalDateTime.now());
-
-        refundRepository.save(refund);
-
-        if (gatewayStatus == RefundStatus.SUCCESS) {
-
-            try {
-
-                rideClient.updatePaymentStatus(
-                        payment.getRideId(),
-                        UpdatePaymentStatusRequest.builder()
-                                .paymentStatus(PaymentStatus.REFUNDED)
-                                .build());
-
-                log.info("Ride Service updated successfully.");
-
-            } catch (Exception ex) {
-
-                log.error(
-                        "Unable to update Ride Service after refund. Ride={}",
-                        payment.getRideId(),
-                        ex
-                );
-            }
-
-        }
-
-        log.info("Refund is created successfully.");
-
+        log.info("Refund created successfully.");
 
         return mapToResponse(refund);
     }
@@ -143,7 +166,10 @@ public class RefundServiceImpl implements RefundService {
 
     @Override
     public List<RefundResponse> getRefundsByRide(Long rideId) {
-        return List.of();
+        return refundRepository.findByRideId(rideId)
+                .stream()
+                .map(this::mapToResponse)
+                .toList();
     }
 
     private RefundResponse mapToResponse(Refund refund){

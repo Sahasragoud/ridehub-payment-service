@@ -15,9 +15,10 @@ public class InternalPaymentController {
     private final PaymentService paymentService;
 
     @PostMapping
-    public PaymentResponse createPayment(
-            @Valid @RequestBody PaymentRequest request) {
-
-        return paymentService.createPayment(request);
+    PaymentResponse createPayment(
+            @RequestHeader("Idempotency-Key") String idempotencyKey,
+            @RequestBody PaymentRequest request
+    ){
+        return paymentService.createPayment(request, idempotencyKey);
     }
 }

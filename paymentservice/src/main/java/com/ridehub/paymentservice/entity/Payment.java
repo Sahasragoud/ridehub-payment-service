@@ -47,6 +47,9 @@ public class Payment {
     @Column(unique = true)
     private String transactionId;
 
+    @Column(nullable = false, unique = true, length = 100)
+    private String idempotencyKey;
+
     private String gateway;
 
     private String gatewayOrderId;
@@ -63,6 +66,7 @@ public class Payment {
     private String gatewayMessage;
 
     private LocalDateTime processedAt;
+
 
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;

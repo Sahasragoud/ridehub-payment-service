@@ -6,6 +6,7 @@ import com.ridehub.paymentservice.service.interfaces.PaymentService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -17,12 +18,16 @@ public class PaymentController {
 
     private final PaymentService paymentService;
 
-    @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
+    @PostMapping
     public PaymentResponse createPayment(
+            @RequestHeader(name = "Idempotency-Key") String idempotencyKey,
             @Valid @RequestBody PaymentRequest request) {
 
-        return paymentService.createPayment(request);
+        return paymentService.createPayment(
+                request,
+                idempotencyKey
+        );
     }
 
     @GetMapping("/{paymentId}")
@@ -45,5 +50,7 @@ public class PaymentController {
 
         return paymentService.getPaymentHistory(payerId);
     }
+
+
 
 }
