@@ -1,10 +1,10 @@
-package com.ridehub.rideservice;
+package com.ridehub.paymentservice;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest
-class RideserviceApplicationTests {
+class PaymentServiceApplication {
 
 	@Test
 	void contextLoads() {
