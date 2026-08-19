@@ -1,4 +1,12 @@
 package com.ridehub.paymentservice.enums;
 
-public class PaymentStatus {
+public enum PaymentStatus {
+
+    PENDING,
+    PROCESSING,
+    SUCCESS,
+    FAILED,
+    REFUNDED,
+    CANCELLED,
+    TIMEOUT
 }

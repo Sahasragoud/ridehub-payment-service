@@ -1,10 +1,7 @@
 package com.ridehub.paymentservice.config;
 
 import com.ridehub.paymentservice.dto.response.ErrorResponse;
-import com.ridehub.paymentservice.exception.BadRequestException;
-import com.ridehub.paymentservice.exception.BusinessRuleViolationException;
-import com.ridehub.paymentservice.exception.DuplicateResourceException;
-import com.ridehub.paymentservice.exception.ResourceNotFoundException;
+import com.ridehub.paymentservice.exception.*;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -117,6 +114,20 @@ public class GlobalExceptionHandler {
     }
 
 
+    @ExceptionHandler(GatewayTimeoutException.class)
+    public ResponseEntity<ErrorResponse> handleException(
+            GatewayTimeoutException ex,
+            HttpServletRequest request) {
+
+        log.error("Payment gateway timed out.", ex);
+
+        return ResponseEntity.status(HttpStatus.GATEWAY_TIMEOUT)
+                .body(buildError(
+                        HttpStatus.GATEWAY_TIMEOUT,
+                        "Payment gateway timed out.",
+                        request
+                ));
+    }
 
     private ErrorResponse buildError(
             HttpStatus status,

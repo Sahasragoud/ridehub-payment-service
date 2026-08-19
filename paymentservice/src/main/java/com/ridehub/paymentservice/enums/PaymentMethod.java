@@ -1,4 +1,11 @@
 package com.ridehub.paymentservice.enums;
 
-public class PaymentMethod {
+public enum PaymentMethod {
+
+    UPI,
+    CARD,
+    NET_BANKING,
+    WALLET,
+    CASH
+
 }

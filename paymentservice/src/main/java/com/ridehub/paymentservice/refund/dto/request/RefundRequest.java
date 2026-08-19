@@ -1,0 +1,22 @@
+package com.ridehub.paymentservice.refund.dto.request;
+
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import lombok.Builder;
+import lombok.Getter;
+
+import java.math.BigDecimal;
+
+@Getter
+@Builder
+public class RefundRequest {
+
+    @NotNull(message = "Refund amount is required.")
+    @DecimalMin(value = "0.01", message = "Refund amount must be greater than zero.")
+    private BigDecimal amount;
+
+    @NotBlank(message = "Refund reason is required.")
+    private String reason;
+
+}
